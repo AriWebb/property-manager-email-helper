@@ -128,7 +128,7 @@ function addSidebar(threadView: ThreadView): void {
           // Create apply button (initially hidden)
           applyButton = document.createElement('button');
           applyButton.id = 'apply-updated-letter';
-          applyButton.innerHTML = '✏️ Apply Updated Letter';
+          applyButton.innerHTML = 'Apply Updated Letter';
           applyButton.style.cssText = `
             display: none;
             margin-top: 12px;
@@ -144,18 +144,10 @@ function addSidebar(threadView: ThreadView): void {
           `;
           applyButton.addEventListener('click', handleButtonClick);
           applyButton.addEventListener('mouseenter', () => {
-            if (isApplied) {
-              applyButton!.style.backgroundColor = '#c5221f';
-            } else {
-              applyButton!.style.backgroundColor = '#1557b0';
-            }
+            applyButton!.style.backgroundColor = '#1557b0';
           });
           applyButton.addEventListener('mouseleave', () => {
-            if (isApplied) {
-              applyButton!.style.backgroundColor = '#ea4335';
-            } else {
-              applyButton!.style.backgroundColor = '#1a73e8';
-            }
+            applyButton!.style.backgroundColor = '#1a73e8';
           });
           
           container.appendChild(summaryDiv);
@@ -228,15 +220,7 @@ function applyUpdatedLetter(): void {
         
         // Provide visual feedback
         if (applyButton) {
-            applyButton.innerHTML = '✅ Applied!';
-            applyButton.style.backgroundColor = '#0d8043';
-            
-            setTimeout(() => {
-                if (isApplied) {
-                    applyButton!.innerHTML = '↶ Undo';
-                    applyButton!.style.backgroundColor = '#ea4335';
-                }
-            }, 1500);
+            applyButton!.innerHTML = '↶ Undo';
         }
     } catch (error) {
         console.error('Error applying updated letter:', error);
@@ -268,15 +252,8 @@ function undoUpdatedLetter(): void {
         
         // Provide visual feedback
         if (applyButton) {
-            applyButton.innerHTML = '↶ Undone!';
-            applyButton.style.backgroundColor = '#0d8043';
-            
-            setTimeout(() => {
-                if (!isApplied) {
-                    applyButton!.innerHTML = '✏️ Apply Updated Letter';
-                    applyButton!.style.backgroundColor = '#1a73e8';
-                }
-            }, 1500);
+            applyButton!.innerHTML = 'Apply Updated Letter';
+            applyButton!.style.backgroundColor = '#1a73e8';
         }
         
         // Clear the original content since it's been restored
@@ -284,7 +261,7 @@ function undoUpdatedLetter(): void {
     } catch (error) {
         console.error('Error undoing updated letter:', error);
         if (applyButton) {
-            applyButton.innerHTML = '❌ Error';
+            applyButton.innerHTML = 'Error';
             applyButton.style.backgroundColor = '#d93025';
             
             setTimeout(() => {
