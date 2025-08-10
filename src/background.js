@@ -1,7 +1,8 @@
 // Background script for Smart Gmail Writer Chrome Extension
 // Handles OpenAI API calls and communication with content script
 import "@inboxsdk/core/background.js";
-const { generateDocument } = require("./generateNotice.js");
+// const { generateDocument } = require("./generateNotice.js");
+const axios = require("axios");
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "generateReply") {
@@ -69,30 +70,43 @@ async function handleGenerateReply(threadText, sendResponse) {
       /24hrnoticedateandtime\s+(.*?)\s+24hrnoticedateandtime/
     );
 
-    if (nameMatch && dateTimeMatch) {
-      const name = nameMatch[1];
-      const dateAndTime = dateTimeMatch[1];
+    const response2 = await axios.post(
+      "http://127.0.0.1:5001/propertymanager-66f54/us-central1/generateWordDoc",
 
-      try {
-        // await generateDocument(name, dateAndTime);
-        const buffer = await generateDocument(name, dateAndTime);
-        console.log("Document created!");
-
-        await currentEmailView.attachFiles([
-          {
-            name: "24hr-notice.docx",
-            mimeType:
-              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            bytes: new Uint8Array(buffer),
-          },
-        ]);
-        console.log("Document created!");
-      } catch (error) {
-        console.error("Error generating document:", error);
+      {
+        name: "John Doe",
+        dateandtime: "August 29 between 6am and 5pm",
+      },
+      {
+        headers: {
+          Authorization: `Bearer 123`,
+        },
       }
-    } else {
-      console.error("Failed to parse variables from ChatGPT response.");
-    }
+    );
+    // if (nameMatch && dateTimeMatch) {
+    //   const name = nameMatch[1];
+    //   const dateAndTime = dateTimeMatch[1];
+
+    //   try {
+    //     // await generateDocument(name, dateAndTime);
+    //     const buffer = await generateDocument(name, dateAndTime);
+    //     console.log("Document created!");
+
+    //     await currentEmailView.attachFiles([
+    //       {
+    //         name: "24hr-notice.docx",
+    //         mimeType:
+    //           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    //         bytes: new Uint8Array(buffer),
+    //       },
+    //     ]);
+    //     console.log("Document created!");
+    //   } catch (error) {
+    //     console.error("Error generating document:", error);
+    //   }
+    // } else {
+    //   console.error("Failed to parse variables from ChatGPT response.");
+    // }
     if (aiReply) {
       sendResponse({
         success: true,
