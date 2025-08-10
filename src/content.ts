@@ -9,6 +9,8 @@ let updatedLetterContent: string = '';
 let applyButton: HTMLElement | null = null;
 let originalContent: string = '';
 let isApplied: boolean = false;
+let hasViolation: boolean = false;
+let bypassWarning: boolean = false;
 
 InboxSDK.load(2, 'sdk_propertymanage_f1f1c36d4b').then((sdk: any) => {
     sdk.Compose.registerComposeViewHandler((composeView: ComposeView) => {
@@ -50,7 +52,7 @@ function handleStreamToken(token: string): void {
     if (currentStreamingElement) {
         // Parse and clean the response content during streaming
         let cleanedContent = parseAIResponse(streamedContent);
-        const htmlContent = cleanedContent.replace(/\n/g, '<br>');
+        const htmlContent = convertMarkdownToHTML(cleanedContent);
         currentStreamingElement.innerHTML = htmlContent;
         
         // Add a cursor effect to show it's still streaming
@@ -62,10 +64,20 @@ function handleStreamEnd(): void {
     if (currentStreamingElement) {
         // Parse and clean the response content
         let cleanedContent = parseAIResponse(streamedContent);
-        const htmlContent = cleanedContent.replace(/\n/g, '<br>');
+        const htmlContent = convertMarkdownToHTML(cleanedContent);
         currentStreamingElement.innerHTML = htmlContent;
     }
     streamedContent = '';
+}
+
+function convertMarkdownToHTML(content: string): string {
+    // Convert **text** to <strong>text</strong>
+    let htmlContent = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // Convert line breaks to HTML
+    htmlContent = htmlContent.replace(/\n/g, '<br>');
+    
+    return htmlContent;
 }
 
 function parseAIResponse(content: string): string {
@@ -73,9 +85,11 @@ function parseAIResponse(content: string): string {
     const updatedLetterMatch = content.match(/Updated Letter:\s*([\s\S]*?)$/i);
     if (updatedLetterMatch) {
         updatedLetterContent = updatedLetterMatch[1].trim();
+        hasViolation = true;
         showApplyButton();
     } else {
         updatedLetterContent = '';
+        hasViolation = false;
         hideApplyButton();
     }
     
@@ -175,6 +189,110 @@ function setupAutoGeneration(composeView: ComposeView): void {
         
         generateAndAppend(composeView, content);
     });
+
+    // Intercept send button to check for violations
+    composeView.on('presending', (event: any) => {
+        if (hasViolation && !bypassWarning) {
+            event.cancel();
+            showViolationWarning();
+        }
+    });
+}
+
+function showViolationWarning(): void {
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `;
+
+    // Create warning dialog
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        max-width: 500px;
+        margin: 20px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        text-align: center;
+    `;
+
+    dialog.innerHTML = `
+        <div style="color: #d93025; font-size: 48px; margin-bottom: 16px;">⚠️</div>
+        <h2 style="color: #d93025; margin-bottom: 16px; font-size: 20px;">Potential Legal Violation Detected</h2>
+        <p style="margin-bottom: 24px; color: #5f6368; line-height: 1.5;">
+            The AI has detected potential violations of California or San Francisco landlord-tenant laws in your email. 
+            Sending this email could expose you to legal risks.
+        </p>
+        <p style="margin-bottom: 32px; color: #5f6368; line-height: 1.5;">
+            <strong>Recommendation:</strong> Review the suggested corrections in the sidebar before sending.
+        </p>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <button id="cancelSend" style="
+                background: #1a73e8;
+                border: 1px solid #1a73e8;
+                color: white;
+                padding: 12px 32px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: 500;
+            ">Cancel & Review</button>
+            <button id="sendAnyway" style="
+                background: transparent;
+                border: none;
+                color: #5f6368;
+                padding: 4px 8px;
+                border-radius: 2px;
+                cursor: pointer;
+                font-size: 10px;
+                text-decoration: underline;
+                font-weight: normal;
+                opacity: 0.7;
+            ">send anyway</button>
+        </div>
+    `;
+
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    // Add event listeners
+    const cancelBtn = dialog.querySelector('#cancelSend');
+    const sendBtn = dialog.querySelector('#sendAnyway');
+
+    cancelBtn?.addEventListener('click', () => {
+        document.body.removeChild(overlay);
+    });
+
+    sendBtn?.addEventListener('click', () => {
+        document.body.removeChild(overlay);
+        // Set bypass flag and trigger send
+        bypassWarning = true;
+        
+        if (currentComposeView) {
+            try {
+                currentComposeView.send();
+                console.log('Send anyway attempted');
+                // Reset bypass flag after a short delay
+                setTimeout(() => {
+                    bypassWarning = false;
+                }, 1000);
+            } catch (error) {
+                console.error('Error sending email:', error);
+                bypassWarning = false;
+            }
+        }
+    });
 }
 
 function showApplyButton(): void {
@@ -212,8 +330,9 @@ function applyUpdatedLetter(): void {
         // Store the original content before applying changes
         originalContent = currentComposeView.getHTMLContent();
         
-        // Set the body content to the updated letter
-        currentComposeView.setBodyHTML(updatedLetterContent.replace(/\n/g, '<br>'));
+        // Set the body content to the updated letter with markdown conversion
+        const htmlContent = convertMarkdownToHTML(updatedLetterContent);
+        currentComposeView.setBodyHTML(htmlContent);
         
         // Update button state
         isApplied = true;
