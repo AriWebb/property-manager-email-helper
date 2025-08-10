@@ -1,0 +1,18 @@
+{
+    "manifest_version": 3,
+    "name": "Smart Gmail Writer",
+    "version": "1.0",
+    "description": "Write email replies using AI inside Gmail.",
+    "permissions": ["scripting", "activeTab", "storage"],
+    "host_permissions": ["https://mail.google.com/*", "https://api.openai.com/*"],
+    "action": {
+    "default_popup": "popup.html"
+    },
+    "background": {
+    "service_worker": "background.js"
+    },
+    "content_scripts": [{
+        "matches": ["https://mail.google.com/*"],
+        "js": ["content.js"]
+    }]
+}
