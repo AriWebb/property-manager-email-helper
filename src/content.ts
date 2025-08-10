@@ -11,6 +11,9 @@ let originalContent: string = '';
 let isApplied: boolean = false;
 let hasViolation: boolean = false;
 let bypassWarning: boolean = false;
+let typingTimer: NodeJS.Timeout | null = null;
+let lastAnalyzedContent: string = '';
+const TYPING_DELAY = 3000; // 3 seconds after user stops typing
 
 InboxSDK.load(2, 'sdk_propertymanage_f1f1c36d4b').then((sdk: any) => {
     sdk.Compose.registerComposeViewHandler((composeView: ComposeView) => {
@@ -181,13 +184,24 @@ function setupAutoGeneration(composeView: ComposeView): void {
     
     const bodyElement = composeView.getBodyElement();
     
-    bodyElement.addEventListener('keyup', (event: KeyboardEvent) => {
-        if (!isEnabled || event.key !== '.') return;
+    bodyElement.addEventListener('input', () => {
+        if (!isEnabled) return;
         
-        const content = composeView.getTextContent();
-        if (content.trim().length < 10) return; // Skip if too short
+        // Clear existing timer
+        if (typingTimer) {
+            clearTimeout(typingTimer);
+        }
         
-        generateAndAppend(composeView, content);
+        // Set new timer
+        typingTimer = setTimeout(() => {
+            const content = composeView.getTextContent();
+            
+            // Only analyze if content is substantial and different from last analysis
+            if (content.trim().length >= 10 && content !== lastAnalyzedContent) {
+                lastAnalyzedContent = content;
+                generateAndAppend(composeView, content);
+            }
+        }, TYPING_DELAY);
     });
 
     // Intercept send button to check for violations
