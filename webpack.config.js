@@ -5,7 +5,8 @@ module.exports = {
   entry: {
     content: './src/content.js',
     background: './src/background.js',
-    popup: './src/popup.js'
+    popup: './src/popup.js',
+    pageWorld: '@inboxsdk/core/pageWorld.js'
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -56,7 +57,5 @@ module.exports = {
       "url": false
     }
   },
-  externals: {
-    '@inboxsdk/core': 'InboxSDK'
-  }
+
 };

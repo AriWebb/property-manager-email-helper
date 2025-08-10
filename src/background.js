@@ -1,5 +1,6 @@
 // Background script for Smart Gmail Writer Chrome Extension
 // Handles OpenAI API calls and communication with content script
+import '@inboxsdk/core/background.js';
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "generateReply") {

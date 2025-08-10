@@ -3,7 +3,7 @@
     "name": "Smart Gmail Writer",
     "version": "1.0",
     "description": "Write email replies using AI inside Gmail.",
-    "permissions": ["storage"],
+    "permissions": ["storage", "scripting"],
     "host_permissions": ["https://mail.google.com/*", "https://api.openai.com/*"],
     "action": {
         "default_popup": "popup.html"
@@ -13,7 +13,7 @@
     },
     "content_scripts": [{
         "matches": ["https://mail.google.com/*"],
-        "js": ["https://www.inboxsdk.com/build/inbox-sdk.js", "content.js"],
+        "js": ["content.js"],
         "run_at": "document_end"
     }]
 }
