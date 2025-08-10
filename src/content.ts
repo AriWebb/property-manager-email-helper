@@ -4,6 +4,11 @@ import type { ComposeView, ThreadView} from '@inboxsdk/core';
 let isEnabled = true;
 let currentStreamingElement: HTMLElement | null = null;
 let streamedContent = '';
+let currentComposeView: ComposeView | null = null;
+let updatedLetterContent: string = '';
+let applyButton: HTMLElement | null = null;
+let originalContent: string = '';
+let isApplied: boolean = false;
 
 InboxSDK.load(2, 'sdk_propertymanage_f1f1c36d4b').then((sdk: any) => {
     sdk.Compose.registerComposeViewHandler((composeView: ComposeView) => {
@@ -43,8 +48,9 @@ function handleStreamStart(): void {
 function handleStreamToken(token: string): void {
     streamedContent += token;
     if (currentStreamingElement) {
-        // Convert newlines to HTML breaks for proper display
-        const htmlContent = streamedContent.replace(/\n/g, '<br>');
+        // Parse and clean the response content during streaming
+        let cleanedContent = parseAIResponse(streamedContent);
+        const htmlContent = cleanedContent.replace(/\n/g, '<br>');
         currentStreamingElement.innerHTML = htmlContent;
         
         // Add a cursor effect to show it's still streaming
@@ -54,11 +60,35 @@ function handleStreamToken(token: string): void {
 
 function handleStreamEnd(): void {
     if (currentStreamingElement) {
-        // Remove the cursor and finalize content
-        const htmlContent = streamedContent.replace(/\n/g, '<br>');
+        // Parse and clean the response content
+        let cleanedContent = parseAIResponse(streamedContent);
+        const htmlContent = cleanedContent.replace(/\n/g, '<br>');
         currentStreamingElement.innerHTML = htmlContent;
     }
     streamedContent = '';
+}
+
+function parseAIResponse(content: string): string {
+    // Extract updated letter content if it exists
+    const updatedLetterMatch = content.match(/Updated Letter:\s*([\s\S]*?)$/i);
+    if (updatedLetterMatch) {
+        updatedLetterContent = updatedLetterMatch[1].trim();
+        showApplyButton();
+    } else {
+        updatedLetterContent = '';
+        hideApplyButton();
+    }
+    
+    // Remove "Explanation:" and "Updated Letter:" prefixes
+    let cleaned = content;
+    
+    // Replace "Explanation:" with nothing, but keep the content after it
+    cleaned = cleaned.replace(/Explanation:\s*/gi, '');
+    
+    // Replace "Updated Letter:" with a line break and bold "Updated Letter" text
+    cleaned = cleaned.replace(/Updated Letter:\s*/gi, '\n\n**Updated Letter:**\n');
+    
+    return cleaned.trim();
 }
 
 function handleStreamError(error: string): void {
@@ -95,7 +125,41 @@ function addSidebar(threadView: ThreadView): void {
           summaryDiv.id = 'thread-summary';
           summaryDiv.innerHTML = '<em>Start typing out an email and the assistant will analyze it for compliance...</em>';
           
+          // Create apply button (initially hidden)
+          applyButton = document.createElement('button');
+          applyButton.id = 'apply-updated-letter';
+          applyButton.innerHTML = '✏️ Apply Updated Letter';
+          applyButton.style.cssText = `
+            display: none;
+            margin-top: 12px;
+            padding: 8px 16px;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            width: 100%;
+          `;
+          applyButton.addEventListener('click', handleButtonClick);
+          applyButton.addEventListener('mouseenter', () => {
+            if (isApplied) {
+              applyButton!.style.backgroundColor = '#c5221f';
+            } else {
+              applyButton!.style.backgroundColor = '#1557b0';
+            }
+          });
+          applyButton.addEventListener('mouseleave', () => {
+            if (isApplied) {
+              applyButton!.style.backgroundColor = '#ea4335';
+            } else {
+              applyButton!.style.backgroundColor = '#1a73e8';
+            }
+          });
+          
           container.appendChild(summaryDiv);
+          container.appendChild(applyButton);
           
           // Set this as the current streaming element
           currentStreamingElement = summaryDiv;
@@ -106,6 +170,9 @@ function addSidebar(threadView: ThreadView): void {
 }
 
 function setupAutoGeneration(composeView: ComposeView): void {
+    // Store reference to current compose view
+    currentComposeView = composeView;
+    
     const bodyElement = composeView.getBodyElement();
     
     bodyElement.addEventListener('keyup', (event: KeyboardEvent) => {
@@ -116,6 +183,116 @@ function setupAutoGeneration(composeView: ComposeView): void {
         
         generateAndAppend(composeView, content);
     });
+}
+
+function showApplyButton(): void {
+    if (applyButton) {
+        applyButton.style.display = 'block';
+        // Reset to apply state when showing button
+        isApplied = false;
+        applyButton.innerHTML = '✏️ Apply Updated Letter';
+        applyButton.style.backgroundColor = '#1a73e8';
+    }
+}
+
+function hideApplyButton(): void {
+    if (applyButton) {
+        applyButton.style.display = 'none';
+        isApplied = false;
+    }
+}
+
+function handleButtonClick(): void {
+    if (isApplied) {
+        undoUpdatedLetter();
+    } else {
+        applyUpdatedLetter();
+    }
+}
+
+function applyUpdatedLetter(): void {
+    if (!currentComposeView || !updatedLetterContent) {
+        console.error('No compose view or updated letter content available');
+        return;
+    }
+    
+    try {
+        // Store the original content before applying changes
+        originalContent = currentComposeView.getHTMLContent();
+        
+        // Set the body content to the updated letter
+        currentComposeView.setBodyHTML(updatedLetterContent.replace(/\n/g, '<br>'));
+        
+        // Update button state
+        isApplied = true;
+        
+        // Provide visual feedback
+        if (applyButton) {
+            applyButton.innerHTML = '✅ Applied!';
+            applyButton.style.backgroundColor = '#0d8043';
+            
+            setTimeout(() => {
+                if (isApplied) {
+                    applyButton!.innerHTML = '↶ Undo';
+                    applyButton!.style.backgroundColor = '#ea4335';
+                }
+            }, 1500);
+        }
+    } catch (error) {
+        console.error('Error applying updated letter:', error);
+        if (applyButton) {
+            applyButton.innerHTML = '❌ Error';
+            applyButton.style.backgroundColor = '#d93025';
+            
+            setTimeout(() => {
+                applyButton!.innerHTML = '✏️ Apply Updated Letter';
+                applyButton!.style.backgroundColor = '#1a73e8';
+                isApplied = false;
+            }, 2000);
+        }
+    }
+}
+
+function undoUpdatedLetter(): void {
+    if (!currentComposeView || !originalContent) {
+        console.error('No compose view or original content available');
+        return;
+    }
+    
+    try {
+        // Restore the original content
+        currentComposeView.setBodyHTML(originalContent);
+        
+        // Update button state
+        isApplied = false;
+        
+        // Provide visual feedback
+        if (applyButton) {
+            applyButton.innerHTML = '↶ Undone!';
+            applyButton.style.backgroundColor = '#0d8043';
+            
+            setTimeout(() => {
+                if (!isApplied) {
+                    applyButton!.innerHTML = '✏️ Apply Updated Letter';
+                    applyButton!.style.backgroundColor = '#1a73e8';
+                }
+            }, 1500);
+        }
+        
+        // Clear the original content since it's been restored
+        originalContent = '';
+    } catch (error) {
+        console.error('Error undoing updated letter:', error);
+        if (applyButton) {
+            applyButton.innerHTML = '❌ Error';
+            applyButton.style.backgroundColor = '#d93025';
+            
+            setTimeout(() => {
+                applyButton!.innerHTML = '↶ Undo';
+                applyButton!.style.backgroundColor = '#ea4335';
+            }, 2000);
+        }
+    }
 }
 
 async function generateAndAppend(composeView: ComposeView, content: string): Promise<void> {
