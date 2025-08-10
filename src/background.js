@@ -1,6 +1,7 @@
 // Background script for Smart Gmail Writer Chrome Extension
 // Handles OpenAI API calls and communication with content script
 import "@inboxsdk/core/background.js";
+const { generateDocument } = require("./generateNotice.js");
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "generateReply") {
@@ -60,6 +61,38 @@ async function handleGenerateReply(threadText, sendResponse) {
     const data = await response.json();
     const aiReply = data.choices?.[0]?.message?.content;
 
+    const nameMatch = data.choices?.[0]?.message?.content.match(
+      /24hrnoticename\s+(.*?)\s+24hrnoticename/
+    );
+    // Regex to extract the date/time between the 24hrnoticedateandtime tags
+    const dateTimeMatch = data.choices?.[0]?.message?.content.match(
+      /24hrnoticedateandtime\s+(.*?)\s+24hrnoticedateandtime/
+    );
+
+    if (nameMatch && dateTimeMatch) {
+      const name = nameMatch[1];
+      const dateAndTime = dateTimeMatch[1];
+
+      try {
+        // await generateDocument(name, dateAndTime);
+        const buffer = await generateDocument(name, dateAndTime);
+        console.log("Document created!");
+
+        await currentEmailView.attachFiles([
+          {
+            name: "24hr-notice.docx",
+            mimeType:
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            bytes: new Uint8Array(buffer),
+          },
+        ]);
+        console.log("Document created!");
+      } catch (error) {
+        console.error("Error generating document:", error);
+      }
+    } else {
+      console.error("Failed to parse variables from ChatGPT response.");
+    }
     if (aiReply) {
       sendResponse({
         success: true,
