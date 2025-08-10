@@ -1,0 +1,16 @@
+Tenant Name,Unit,Lease Start,Lease End,Monthly Rent,Security Deposit,Last Payment Date,Payment Status,Email
+Alex Brown,1D,2024-11-20,2025-11-20,2359,2725.11,2025-09-11,Vacated,liue727@gmail.com
+Jamie Williams,6D,2024-04-22,2025-04-22,2513,2723.54,2024-08-13,Current,jamie.williams@rentroll.com
+Taylor Williams,1C,2024-06-24,2025-06-24,2127,1993.68,2024-08-19,Current,taylor.williams@mail.com
+Jamie Smith,7A,2024-06-12,2025-06-12,2775,2348.94,2025-03-27,Vacated,jamie.smith@mail.com
+Taylor Hernandez,4A,2024-03-09,2025-03-09,2041,2106.65,2024-12-16,Vacated,taylor.hernandez@rentroll.com
+Sam Brown,2D,2024-05-12,2025-05-12,1330,1119.56,2024-09-27,Vacated,sam.brown@housing.org
+Taylor Martinez,9A,2024-03-01,2025-03-01,1561,1811.72,2024-05-25,Current,taylor.martinez@rentroll.com
+Casey Davis,3D,2024-09-26,2025-09-26,2886,3004.96,2025-04-28,Current,casey.davis@mail.com
+Taylor Miller,5D,2024-11-17,2025-11-17,2997,2620.3,2024-12-04,Vacated,taylor.miller@mail.com
+Casey Williams,7B,2024-01-11,2025-01-10,2968,2884.92,2024-07-30,Vacated,casey.williams@example.com
+Sam Davis,8A,2024-09-18,2025-09-18,1731,1875.09,2025-01-18,Vacated,sam.davis@housing.org
+Jamie Garcia,6A,2024-03-10,2025-03-10,2645,2309.82,2024-10-19,Vacated,jamie.garcia@mail.com
+Sam Williams,1C,2024-01-15,2025-01-14,1540,1794.24,2024-04-27,Vacated,sam.williams@mail.com
+Riley Martinez,5D,2024-01-03,2025-01-02,2353,2754.65,2024-10-10,Vacated,riley.martinez@rentroll.com
+Riley Brown,8C,2024-11-20,2025-11-20,1348,1142.63,2025-07-25,Vacated,riley.brown@mail.com
