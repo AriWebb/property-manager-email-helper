@@ -3,7 +3,7 @@ const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   entry: {
-    content: './src/content.js',
+    content: './src/content.ts',
     background: './src/background.js',
     popup: './src/popup.js',
     pageWorld: '@inboxsdk/core/pageWorld.js'
@@ -16,6 +16,11 @@ module.exports = {
   mode: 'production',
   module: {
     rules: [
+      {
+        test: /\.ts$/,
+        exclude: /node_modules/,
+        use: 'ts-loader'
+      },
       {
         test: /\.js$/,
         exclude: /node_modules/,
@@ -44,7 +49,7 @@ module.exports = {
     })
   ],
   resolve: {
-    extensions: ['.js'],
+    extensions: ['.ts', '.js'],
     fallback: {
       "buffer": false,
       "crypto": false,
