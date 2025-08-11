@@ -5,6 +5,7 @@ import { OpenAI } from 'openai';
 
 // Store active streams per tab
 const activeStreams = new Map();
+const axios = require("axios");
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "generateReply") {
@@ -56,7 +57,7 @@ async function handleGenerateReply(threadText, tabId) {
       messages: [
         {
           role: "system",
-          content: "You are an expert in California landlord-tenant law with a specialization in San Francisco's local ordinances. Your role is to: 1. Review letters from landlords to tenants in San Francisco. You will also receive the tenant's rent roll information. 2. Identify any violations of applicable laws, including the California Civil Code, San Francisco Rent Ordinance, San Francisco Administrative Code, and state/federal fair housing laws.  3. If a violation exists, provide:  - A very concise explanation of the violation (2 short sentences at the most), including the specific law/code section. - A fully compliant, revised version of the letter that preserves the original intent where possible but removes or alters illegal language or requirements. Always produce the output in this exact format: If violations exist: Explanation: [Very concise explanation with citations, 2 short sentences at the most, preferablly 1 sentence] Updated Letter: [Compliant version]  If no violations exist:  Explanation: No violations found. The letter appears compliant with California and San Francisco landlord-tenant laws. If a 24 hour notice is needed to be generated, return in the same string 24hrnoticename (name) 24hrnoticename and 24hrnoticedateandtime (day and time of entering) 24hrnoticedateandtime."
+          content: "You are an expert in California landlord-tenant law with a specialization in San Francisco's local ordinances. Your role is to: 1. Review letters from landlords to tenants in San Francisco. You will also receive the tenant's rent roll information. 2. Identify any violations of applicable laws, including the California Civil Code, San Francisco Rent Ordinance, San Francisco Administrative Code, and state/federal fair housing laws. 3. If a violation exists, provide: - A very concise explanation of the violation (2 short sentences at the most), including the specific law/code section. - A fully compliant, revised version of the letter that preserves the original intent where possible but removes or alters illegal language or requirements. 4. Determine if the landlord intends to enter the tenant's unit based on the letter content. Always produce the output in this exact format: If violations exist: Explanation: [Very concise explanation with citations, 2 short sentences at the most, preferably 1 sentence] Updated Letter: [Compliant version] If no violations exist: Explanation: No violations found. The letter appears compliant with California and San Francisco landlord-tenant laws. Additionally, if the landlord indicates they will enter the unit, add: ENTRY_INTENT: YES TENANT_NAME: [tenant name from letter] ENTRY_DATETIME: [specific date and time mentioned for entry] If no entry is mentioned, add: ENTRY_INTENT: NO"
         },
         {
           role: "user",
@@ -69,7 +70,9 @@ async function handleGenerateReply(threadText, tabId) {
     }, {
       signal: controller.signal
     });
-
+    // Store full response for parsing entry intent
+    let fullResponse = '';
+    
     // Stream the response
     for await (const chunk of stream) {
       if (controller.signal.aborted) {
@@ -78,6 +81,7 @@ async function handleGenerateReply(threadText, tabId) {
       
       const content = chunk.choices[0]?.delta?.content;
       if (content) {
+        fullResponse += content;
         chrome.tabs.sendMessage(tabId, {
           action: "streamToken",
           token: content
@@ -89,6 +93,57 @@ async function handleGenerateReply(threadText, tabId) {
     chrome.tabs.sendMessage(tabId, { action: "streamEnd" });
     activeStreams.delete(tabId);
 
+    // Parse the response for entry intent
+    const entryIntentMatch = fullResponse.match(/ENTRY_INTENT:\s*(YES|NO)/i);
+    const tenantNameMatch = fullResponse.match(/TENANT_NAME:\s*(.+?)(?:\n|$)/i);
+    const entryDateTimeMatch = fullResponse.match(/ENTRY_DATETIME:\s*(.+?)(?:\n|$)/i);
+
+    if (entryIntentMatch && entryIntentMatch[1].toUpperCase() === 'YES' && tenantNameMatch && entryDateTimeMatch) {
+      try {
+        const tenantName = tenantNameMatch[1].trim();
+        const entryDateTime = entryDateTimeMatch[1].trim();
+        
+        console.log('Generating 24-hour notice for:', { name: tenantName, dateandtime: entryDateTime });
+        
+        const response2 = await axios.post(
+          "https://us-central1-propertymanager-66f54.cloudfunctions.net/generateWordDoc",
+          {
+            name: tenantName,
+            dateandtime: entryDateTime,
+          },
+          {
+            headers: {
+              Authorization: `Bearer 123`,
+            },
+          }
+        );
+
+        // Download the file from the response URL
+        if (response2.data && response2.data.message) {
+          const fileResponse = await axios.get(response2.data.message, {
+            responseType: 'blob'
+          });
+          
+          // Convert blob to array buffer then to base64 for transfer
+          const arrayBuffer = await fileResponse.data.arrayBuffer();
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+          
+          // Send the file to content script for attachment
+          chrome.tabs.sendMessage(tabId, {
+            action: "attachFile",
+            fileData: base64,
+            fileName: "Notice of Entry.docx",
+            mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          });
+        }
+      } catch (error) {
+        console.error("Error generating or downloading notice:", error);
+        chrome.tabs.sendMessage(tabId, {
+          action: "streamError",
+          error: `Error generating notice: ${error.message}`
+        });
+      }
+    }
   } catch (error) {
     console.error("Error generating AI reply:", error);
     

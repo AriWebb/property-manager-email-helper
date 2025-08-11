@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@inboxsdk/core": "^2.0.0",
-    "openai": "^5.12.2"
+    "openai": "^5.12.2",
+    "axios": "^1.11.0"
   },
   "devDependencies": {
     "@babel/core": "^7.23.0",

@@ -13,7 +13,9 @@ let hasViolation: boolean = false;
 let bypassWarning: boolean = false;
 let typingTimer: NodeJS.Timeout | null = null;
 let lastAnalyzedContent: string = '';
-const TYPING_DELAY = 3000; // 3 seconds after user stops typing
+let attachButton: HTMLElement | null = null;
+let generatedDocument: { fileData: string; fileName: string; mimeType: string } | null = null;
+const TYPING_DELAY = 2000; // 2 seconds after user stops typing
 
 InboxSDK.load(2, 'sdk_propertymanage_f1f1c36d4b').then((sdk: any) => {
     sdk.Compose.registerComposeViewHandler((composeView: ComposeView) => {
@@ -40,6 +42,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case 'streamError':
       handleStreamError(message.error);
       break;
+    case 'attachFile':
+      handleFileAttachment(message.fileData, message.fileName, message.mimeType);
+      break;
   }
 });
 
@@ -48,6 +53,9 @@ function handleStreamStart(): void {
     if (currentStreamingElement) {
         currentStreamingElement.innerHTML = 'Analyzing...';
     }
+    // Reset generated document and hide attach button on new analysis
+    generatedDocument = null;
+    hideAttachButton();
 }
 
 function handleStreamToken(token: string): void {
@@ -85,7 +93,7 @@ function convertMarkdownToHTML(content: string): string {
 
 function parseAIResponse(content: string): string {
     // Extract updated letter content if it exists
-    const updatedLetterMatch = content.match(/Updated Letter:\s*([\s\S]*?)$/i);
+    const updatedLetterMatch = content.match(/Updated Letter:\s*([\s\S]*?)(?=ENTRY_INTENT:|$)/i);
     if (updatedLetterMatch) {
         updatedLetterContent = updatedLetterMatch[1].trim();
         hasViolation = true;
@@ -105,6 +113,11 @@ function parseAIResponse(content: string): string {
     // Replace "Updated Letter:" with a line break and bold "Updated Letter" text
     cleaned = cleaned.replace(/Updated Letter:\s*/gi, '\n\n**Updated Letter:**\n');
     
+    // Remove ENTRY_INTENT, TENANT_NAME, and ENTRY_DATETIME from display
+    cleaned = cleaned.replace(/ENTRY_INTENT:\s*(YES|NO)\s*/gi, '');
+    cleaned = cleaned.replace(/TENANT_NAME:\s*[^\n]*\s*/gi, '');
+    cleaned = cleaned.replace(/ENTRY_DATETIME:\s*[^\n]*\s*/gi, '');
+    
     return cleaned.trim();
 }
 
@@ -113,6 +126,97 @@ function handleStreamError(error: string): void {
         currentStreamingElement.innerHTML = `<span style="color: red;">Error: ${error}</span>`;
     }
     streamedContent = '';
+}
+
+function handleFileAttachment(fileData: string, fileName: string, mimeType: string): void {
+    try {
+        // Store the document data
+        generatedDocument = { fileData, fileName, mimeType };
+        
+        // Show the attach button
+        showAttachButton();
+        
+        // Show notification in the sidebar
+        if (currentStreamingElement) {
+            const currentContent = currentStreamingElement.innerHTML;
+            currentStreamingElement.innerHTML = currentContent + 
+                `<br><br><div style="background: #e3f2fd; padding: 8px; border-radius: 4px; color: #1976d2; font-size: 12px;">
+                    📄 Notice of Entry document generated and ready to attach
+                </div>`;
+        }
+        
+        console.log(`${fileName} generated and ready for attachment`);
+    } catch (error) {
+        console.error('Error handling file attachment:', error);
+        if (currentStreamingElement) {
+            const currentContent = currentStreamingElement.innerHTML;
+            currentStreamingElement.innerHTML = currentContent + 
+                `<br><br><div style="background: #ffebee; padding: 8px; border-radius: 4px; color: #c62828; font-size: 12px;">
+                    ❌ Error generating document: ${error instanceof Error ? error.message : 'Unknown error'}
+                </div>`;
+        }
+    }
+}
+
+function attachGeneratedDocument(): void {
+    try {
+        if (!currentComposeView) {
+            console.error('No compose view available for file attachment');
+            return;
+        }
+
+        if (!generatedDocument) {
+            console.error('No generated document available');
+            return;
+        }
+
+        // Convert base64 to blob
+        const binaryString = atob(generatedDocument.fileData);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        // Create a File object with the proper filename
+        const file = new File([bytes], generatedDocument.fileName, { 
+            type: generatedDocument.mimeType 
+        });
+        
+        // Attach the file to the current compose view
+        currentComposeView.attachFiles([file]);
+        
+        console.log(`Successfully attached ${generatedDocument.fileName} to email`);
+        
+        // Update button state
+        if (attachButton) {
+            attachButton.innerHTML = '✅ Document Attached';
+            attachButton.style.backgroundColor = '#2e7d32';
+            (attachButton as HTMLButtonElement).disabled = true;
+        }
+        
+        // Show success notification in the sidebar
+        if (currentStreamingElement) {
+            const currentContent = currentStreamingElement.innerHTML;
+            currentStreamingElement.innerHTML = currentContent + 
+                `<br><br><div style="background: #e8f5e8; padding: 8px; border-radius: 4px; color: #2e7d32; font-size: 12px;">
+                    ✅ Notice of Entry document attached to email
+                </div>`;
+        }
+    } catch (error) {
+        console.error('Error attaching file:', error);
+        if (attachButton) {
+            attachButton.innerHTML = '❌ Attachment Failed';
+            attachButton.style.backgroundColor = '#d32f2f';
+            
+            setTimeout(() => {
+                if (attachButton) {
+                    attachButton.innerHTML = '📎 Attach Notice of Entry';
+                    attachButton.style.backgroundColor = '#1976d2';
+                    (attachButton as HTMLButtonElement).disabled = false;
+                }
+            }, 2000);
+        }
+    }
 }
 
 function addToggleButton(composeView: ComposeView): void {
@@ -166,9 +270,39 @@ function addSidebar(threadView: ThreadView): void {
           applyButton.addEventListener('mouseleave', () => {
             applyButton!.style.backgroundColor = '#1a73e8';
           });
+
+          // Create attach button (initially hidden)
+          attachButton = document.createElement('button');
+          attachButton.id = 'attach-notice-document';
+          attachButton.innerHTML = '📎 Attach Notice of Entry';
+          attachButton.style.cssText = `
+            display: none;
+            margin-top: 8px;
+            padding: 8px 16px;
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            width: 100%;
+          `;
+          attachButton.addEventListener('click', attachGeneratedDocument);
+          attachButton.addEventListener('mouseenter', () => {
+            if (!(attachButton as HTMLButtonElement).disabled) {
+              attachButton!.style.backgroundColor = '#1565c0';
+            }
+          });
+          attachButton.addEventListener('mouseleave', () => {
+            if (!(attachButton as HTMLButtonElement).disabled) {
+              attachButton!.style.backgroundColor = '#1976d2';
+            }
+          });
           
           container.appendChild(summaryDiv);
           container.appendChild(applyButton);
+          container.appendChild(attachButton);
           
           // Set this as the current streaming element
           currentStreamingElement = summaryDiv;
@@ -323,6 +457,22 @@ function hideApplyButton(): void {
     if (applyButton) {
         applyButton.style.display = 'none';
         isApplied = false;
+    }
+}
+
+function showAttachButton(): void {
+    if (attachButton) {
+        attachButton.style.display = 'block';
+        attachButton.innerHTML = '📎 Attach Notice of Entry';
+        attachButton.style.backgroundColor = '#1976d2';
+        (attachButton as HTMLButtonElement).disabled = false;
+    }
+}
+
+function hideAttachButton(): void {
+    if (attachButton) {
+        attachButton.style.display = 'none';
+        (attachButton as HTMLButtonElement).disabled = false;
     }
 }
 
