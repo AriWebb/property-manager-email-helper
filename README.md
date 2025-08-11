@@ -1,14 +1,24 @@
 # Property Manager Email Helper
 
-An AI-powered Gmail Chrome extension that helps property managers write compliant tenant communications. This extension integrates directly into Gmail to provide intelligent email suggestions and assistance for property management workflows.
+San Francisco has over 200,000 renters and thousands of property managers navigating one of the most complex landlord-tenant legal landscapes in the country. California state statutes and San Francisco’s rent ordinance are lengthy, intricate, and often overlap—making compliance a constant challenge.
+
+We built an email assistant that helps property managers and landlords in San Francisco write legally compliant emails in real time. As they type, the assistant flags potential violations of California or San Francisco laws and suggests clear, legally sound fixes.
+
+By making legal guidance instantly accessible, our tool helps property managers and landlords respect tenants’ rights, avoid costly disputes, and save thousands in potential legal fees—while fostering better landlord-tenant relationships.
+
+Team:
+
+- Ari Webb — MS in Computer Science from Stanford. Previously bootstrapped a property management platform serving 5 companies managing 10,000+ units. Has firsthand experience with the difficulty and expense of complying with landlord-tenant laws.
+
+- Eugene Liu — Software engineer at Twine (YC S23) and practicing attorney at Bornstein Law, a real estate law firm specializing in landlord-tenant issues in San Francisco. Has seen how non-compliance can lead to steep legal costs and protracted disputes for landlords.
 
 ## Features
 
-- 🤖 AI-powered email writing assistance
-- 📧 Seamless Gmail integration
-- 🏠 Property management specific templates
-- ⚖️ Tenant law compliance assistance
-- 🔒 Secure OpenAI API integration
+- AI-powered email writing assistance
+- Seamless Gmail integration
+- Property management specific templates
+- Tenant law compliance assistance
+- Secure OpenAI API integration
 
 ## Prerequisites
 
