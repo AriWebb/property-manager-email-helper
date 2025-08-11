@@ -92,8 +92,8 @@ function convertMarkdownToHTML(content: string): string {
 }
 
 function parseAIResponse(content: string): string {
-    // Extract updated letter content if it exists
-    const updatedLetterMatch = content.match(/Updated Letter:\s*([\s\S]*?)$/i);
+    // Extract updated email content if it exists
+    const updatedLetterMatch = content.match(/Updated Email:\s*([\s\S]*?)$/i);
     if (updatedLetterMatch) {
         updatedLetterContent = updatedLetterMatch[1].trim();
         hasViolation = true;
@@ -104,14 +104,14 @@ function parseAIResponse(content: string): string {
         hideApplyButton();
     }
     
-    // Remove "Explanation:" and "Updated Letter:" prefixes
+    // Remove "Explanation:" and "Updated Email:" prefixes
     let cleaned = content;
     
     // Replace "Explanation:" with nothing, but keep the content after it
     cleaned = cleaned.replace(/Explanation:\s*/gi, '');
     
-    // Replace "Updated Letter:" with a line break and bold "Updated Letter" text
-    cleaned = cleaned.replace(/Updated Letter:\s*/gi, '\n\n**Updated Letter:**\n');
+    // Replace "Updated Email:" with a line break and bold "Updated Email" text
+    cleaned = cleaned.replace(/Updated Email:\s*/gi, '\n\n**Updated Email:**\n');
     
     return cleaned.trim();
 }
@@ -443,7 +443,7 @@ function showApplyButton(): void {
         applyButton.style.display = 'block';
         // Reset to apply state when showing button
         isApplied = false;
-        applyButton.innerHTML = '✏️ Apply Updated Letter';
+        applyButton.innerHTML = '✏️ Apply Updated Email';
         applyButton.style.backgroundColor = '#1a73e8';
     }
 }
@@ -481,7 +481,7 @@ function handleButtonClick(): void {
 
 function applyUpdatedLetter(): void {
     if (!currentComposeView || !updatedLetterContent) {
-        console.error('No compose view or updated letter content available');
+        console.error('No compose view or updated email content available');
         return;
     }
     
@@ -489,7 +489,7 @@ function applyUpdatedLetter(): void {
         // Store the original content before applying changes
         originalContent = currentComposeView.getHTMLContent();
         
-        // Set the body content to the updated letter with markdown conversion
+        // Set the body content to the updated email with markdown conversion
         const htmlContent = convertMarkdownToHTML(updatedLetterContent);
         currentComposeView.setBodyHTML(htmlContent);
         
@@ -501,13 +501,13 @@ function applyUpdatedLetter(): void {
             applyButton!.innerHTML = '↶ Undo';
         }
     } catch (error) {
-        console.error('Error applying updated letter:', error);
+        console.error('Error applying updated email:', error);
         if (applyButton) {
             applyButton.innerHTML = '❌ Error';
             applyButton.style.backgroundColor = '#d93025';
             
             setTimeout(() => {
-                applyButton!.innerHTML = '✏️ Apply Updated Letter';
+                applyButton!.innerHTML = '✏️ Apply Updated Email';
                 applyButton!.style.backgroundColor = '#1a73e8';
                 isApplied = false;
             }, 2000);
@@ -530,14 +530,14 @@ function undoUpdatedLetter(): void {
         
         // Provide visual feedback
         if (applyButton) {
-            applyButton!.innerHTML = 'Apply Updated Letter';
+            applyButton!.innerHTML = 'Apply Updated Email';
             applyButton!.style.backgroundColor = '#1a73e8';
         }
         
         // Clear the original content since it's been restored
         originalContent = '';
     } catch (error) {
-        console.error('Error undoing updated letter:', error);
+        console.error('Error undoing updated email:', error);
         if (applyButton) {
             applyButton.innerHTML = 'Error';
             applyButton.style.backgroundColor = '#d93025';
