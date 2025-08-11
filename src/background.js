@@ -119,7 +119,7 @@ async function handleGenerateReply(threadText, tabId) {
         console.log('Generating 24-hour notice for:', { name: tenantName, dateandtime: entryDateTime });
         
         const response2 = await axios.post(
-          "https://us-central1-propertymanager-66f54.cloudfunctions.net/generateWordDoc",
+          process.env.FIREBASE_FUNCTION_ENDPOINT,
           {
             name: tenantName,
             dateandtime: entryDateTime,

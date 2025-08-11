@@ -4,7 +4,7 @@
     "version": "1.0",
     "description": "Write email replies using AI inside Gmail.",
     "permissions": ["storage", "scripting"],
-    "host_permissions": ["https://mail.google.com/*", "https://api.openai.com/*", "https://us-central1-propertymanager-66f54.cloudfunctions.net/*", "https://firebasestorage.googleapis.com/v0/b/propertymanager-66f54.firebasestorage.app/*"],
+    "host_permissions": ["https://mail.google.com/*", "https://api.openai.com/*", "https://us-central1-${PROJECT_ID}.cloudfunctions.net/*", "${FIREBASE_STORAGE_ENDPOINT}/*"],
     "action": {
         "default_popup": "popup.html"
     },
