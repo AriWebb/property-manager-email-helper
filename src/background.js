@@ -61,7 +61,7 @@ async function handleGenerateReply(threadText, tabId) {
         },
         {
           role: "user",
-          content: `Tenant Info: rent: $1,500/month, race: White, unit: 613A  Letter: ${threadText}`
+          content: `Letter: ${threadText}`
         }
       ],
       max_tokens: 500,
@@ -73,7 +73,7 @@ async function handleGenerateReply(threadText, tabId) {
     // Store full response for parsing entry intent
     let fullResponse = '';
     
-    // Stream the response
+    // Collect the complete response first
     for await (const chunk of stream) {
       if (controller.signal.aborted) {
         break;
@@ -82,21 +82,34 @@ async function handleGenerateReply(threadText, tabId) {
       const content = chunk.choices[0]?.delta?.content;
       if (content) {
         fullResponse += content;
-        chrome.tabs.sendMessage(tabId, {
-          action: "streamToken",
-          token: content
-        });
       }
+    }
+
+    // Parse the response for entry intent before streaming
+    const entryIntentMatch = fullResponse.match(/ENTRY_INTENT:\s*(YES|NO)/i);
+    const tenantNameMatch = fullResponse.match(/TENANT_NAME:\s*(.+?)(?:\n|$)/i);
+    const entryDateTimeMatch = fullResponse.match(/ENTRY_DATETIME:\s*(.+?)(?:\n|$)/i);
+
+    // Remove entry intent fields from the response that will be shown to user
+    let cleanedResponse = fullResponse.replace(/ENTRY_INTENT:\s*(YES|NO)\s*/gi, '');
+    cleanedResponse = cleanedResponse.replace(/TENANT_NAME:\s*[^\n]*\s*/gi, '');
+    cleanedResponse = cleanedResponse.replace(/ENTRY_DATETIME:\s*[^\n]*\s*/gi, '');
+    cleanedResponse = cleanedResponse.trim();
+
+    // Stream the cleaned response to frontend
+    chrome.tabs.sendMessage(tabId, { action: "streamStart" });
+    
+    // Send the cleaned content as a single token
+    if (cleanedResponse) {
+      chrome.tabs.sendMessage(tabId, {
+        action: "streamToken",
+        token: cleanedResponse
+      });
     }
 
     // Signal end of stream
     chrome.tabs.sendMessage(tabId, { action: "streamEnd" });
     activeStreams.delete(tabId);
-
-    // Parse the response for entry intent
-    const entryIntentMatch = fullResponse.match(/ENTRY_INTENT:\s*(YES|NO)/i);
-    const tenantNameMatch = fullResponse.match(/TENANT_NAME:\s*(.+?)(?:\n|$)/i);
-    const entryDateTimeMatch = fullResponse.match(/ENTRY_DATETIME:\s*(.+?)(?:\n|$)/i);
 
     if (entryIntentMatch && entryIntentMatch[1].toUpperCase() === 'YES' && tenantNameMatch && entryDateTimeMatch) {
       try {

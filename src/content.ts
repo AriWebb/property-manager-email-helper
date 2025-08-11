@@ -93,7 +93,7 @@ function convertMarkdownToHTML(content: string): string {
 
 function parseAIResponse(content: string): string {
     // Extract updated letter content if it exists
-    const updatedLetterMatch = content.match(/Updated Letter:\s*([\s\S]*?)(?=ENTRY_INTENT:|$)/i);
+    const updatedLetterMatch = content.match(/Updated Letter:\s*([\s\S]*?)$/i);
     if (updatedLetterMatch) {
         updatedLetterContent = updatedLetterMatch[1].trim();
         hasViolation = true;
@@ -112,11 +112,6 @@ function parseAIResponse(content: string): string {
     
     // Replace "Updated Letter:" with a line break and bold "Updated Letter" text
     cleaned = cleaned.replace(/Updated Letter:\s*/gi, '\n\n**Updated Letter:**\n');
-    
-    // Remove ENTRY_INTENT, TENANT_NAME, and ENTRY_DATETIME from display
-    cleaned = cleaned.replace(/ENTRY_INTENT:\s*(YES|NO)\s*/gi, '');
-    cleaned = cleaned.replace(/TENANT_NAME:\s*[^\n]*\s*/gi, '');
-    cleaned = cleaned.replace(/ENTRY_DATETIME:\s*[^\n]*\s*/gi, '');
     
     return cleaned.trim();
 }
@@ -141,7 +136,7 @@ function handleFileAttachment(fileData: string, fileName: string, mimeType: stri
             const currentContent = currentStreamingElement.innerHTML;
             currentStreamingElement.innerHTML = currentContent + 
                 `<br><br><div style="background: #e3f2fd; padding: 8px; border-radius: 4px; color: #1976d2; font-size: 12px;">
-                    📄 Notice of Entry document generated and ready to attach
+                    Notice of Entry document generated and ready to attach
                 </div>`;
         }
         
@@ -189,7 +184,7 @@ function attachGeneratedDocument(): void {
         
         // Update button state
         if (attachButton) {
-            attachButton.innerHTML = '✅ Document Attached';
+            attachButton.innerHTML = 'Document Attached';
             attachButton.style.backgroundColor = '#2e7d32';
             (attachButton as HTMLButtonElement).disabled = true;
         }
@@ -199,18 +194,18 @@ function attachGeneratedDocument(): void {
             const currentContent = currentStreamingElement.innerHTML;
             currentStreamingElement.innerHTML = currentContent + 
                 `<br><br><div style="background: #e8f5e8; padding: 8px; border-radius: 4px; color: #2e7d32; font-size: 12px;">
-                    ✅ Notice of Entry document attached to email
+                     Notice of Entry document attached to email
                 </div>`;
         }
     } catch (error) {
         console.error('Error attaching file:', error);
         if (attachButton) {
-            attachButton.innerHTML = '❌ Attachment Failed';
+            attachButton.innerHTML = 'Attachment Failed';
             attachButton.style.backgroundColor = '#d32f2f';
             
             setTimeout(() => {
                 if (attachButton) {
-                    attachButton.innerHTML = '📎 Attach Notice of Entry';
+                    attachButton.innerHTML = 'Attach Notice of Entry';
                     attachButton.style.backgroundColor = '#1976d2';
                     (attachButton as HTMLButtonElement).disabled = false;
                 }
@@ -249,7 +244,7 @@ function addSidebar(threadView: ThreadView): void {
           // Create apply button (initially hidden)
           applyButton = document.createElement('button');
           applyButton.id = 'apply-updated-letter';
-          applyButton.innerHTML = 'Apply Updated Letter';
+          applyButton.innerHTML = 'Apply Updated Email';
           applyButton.style.cssText = `
             display: none;
             margin-top: 12px;
