@@ -78,8 +78,8 @@ exports.generateWordDoc = functions.https.onRequest(async (req, res) => {
   });
   console.log(`Generated document`);
   const downloadURL = await getDownloadURL(file);
-  console.log(`Download URL `);
+  console.log(`Download URL: ${downloadURL} `);
 
   // Return a result
-  res.status(200).send({ message: "generated successfully" });
+  res.status(200).send({ message: downloadURL });
 });
